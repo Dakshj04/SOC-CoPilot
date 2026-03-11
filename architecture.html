@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KPMG MDR SOC Copilot — Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@400;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #060b14;
+    font-family: 'Rajdhani', sans-serif;
+    color: #c8d8e8;
+    min-height: 100vh;
+    padding: 30px 20px 50px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(30,58,95,0.15) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(30,58,95,0.15) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding: 20px;
+    border: 1px solid #1e3a5f;
+    border-radius: 4px;
+    background: linear-gradient(135deg, #060b14 0%, #0d1b2e 100%);
+    position: relative;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #4d9fff, #00ff88, #4d9fff, transparent);
+  }
+  .header-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: #00ff88;
+    letter-spacing: 4px;
+    margin-bottom: 8px;
+  }
+  .header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #7eb3e8;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+  .header p {
+    font-size: 0.85rem;
+    color: #4d7aa8;
+    margin-top: 6px;
+    letter-spacing: 2px;
+  }
+
+  /* Layer boxes */
+  .layer {
+    background: linear-gradient(135deg, #0a1628 0%, #0d1b2e 100%);
+    border: 1px solid #1e3a5f;
+    border-radius: 6px;
+    padding: 20px 24px;
+    margin-bottom: 0;
+    position: relative;
+  }
+  .layer::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    border-radius: 6px 0 0 6px;
+  }
+  .layer.blue::before   { background: #4d9fff; }
+  .layer.green::before  { background: #00ff88; }
+  .layer.orange::before { background: #ff8800; }
+  .layer.red::before    { background: #ff4444; }
+  .layer.purple::before { background: #9d4dff; }
+  .layer.teal::before   { background: #00d4ff; }
+
+  .layer-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .layer.blue .layer-label   { color: #4d9fff; }
+  .layer.green .layer-label  { color: #00ff88; }
+  .layer.orange .layer-label { color: #ff8800; }
+  .layer.red .layer-label    { color: #ff4444; }
+  .layer.purple .layer-label { color: #9d4dff; }
+  .layer.teal .layer-label   { color: #00d4ff; }
+
+  .layer-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #e0e0e0;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+  }
+
+  /* Two column inside layer */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+  /* Inner cards */
+  .card {
+    background: #060b14;
+    border: 1px solid #1e3a5f;
+    border-radius: 4px;
+    padding: 12px 14px;
+  }
+  .card-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+  .card-title.blue   { color: #4d9fff; }
+  .card-title.green  { color: #00ff88; }
+  .card-title.orange { color: #ff8800; }
+  .card-title.red    { color: #ff4444; }
+  .card-title.purple { color: #9d4dff; }
+
+  .event-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+  }
+  .event-id {
+    background: #1e3a5f;
+    color: #4d9fff;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 0.65rem;
+    white-space: nowrap;
+  }
+  .event-name { color: #8899aa; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    margin: 2px 2px 2px 0;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .badge-blue   { background: #4d9fff20; border: 1px solid #4d9fff; color: #4d9fff; }
+  .badge-green  { background: #00ff8820; border: 1px solid #00ff88; color: #00ff88; }
+  .badge-red    { background: #ff444420; border: 1px solid #ff4444; color: #ff4444; }
+  .badge-orange { background: #ff880020; border: 1px solid #ff8800; color: #ff8800; }
+  .badge-purple { background: #9d4dff20; border: 1px solid #9d4dff; color: #9d4dff; }
+
+  .detail-row {
+    font-size: 0.78rem;
+    color: #8899aa;
+    padding: 2px 0;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .detail-row::before { content: '→'; color: #1e3a5f; flex-shrink: 0; }
+
+  /* Arrow connector */
+  .connector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 6px 0;
+    gap: 2px;
+  }
+  .connector-line {
+    width: 2px;
+    height: 16px;
+    background: linear-gradient(to bottom, #1e3a5f, #4d9fff);
+  }
+  .connector-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.58rem;
+    color: #4d7aa8;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .connector-arrow { color: #4d9fff; font-size: 0.8rem; }
+
+  /* Split row for DB + Playbooks */
+  .split-row {
+    display: grid;
+    grid-template-columns: 1fr 20px 1fr;
+    gap: 0;
+    align-items: start;
+  }
+  .split-divider {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: 20px;
+  }
+  .split-divider-line {
+    width: 1px;
+    height: 60px;
+    background: linear-gradient(to bottom, #1e3a5f, transparent);
+  }
+
+  /* Dashboard tabs */
+  .tabs-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .tab-item {
+    background: #060b14;
+    border: 1px solid #1e3a5f;
+    border-radius: 4px;
+    padding: 10px 8px;
+    text-align: center;
+    font-size: 0.7rem;
+  }
+  .tab-number {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    color: #4d7aa8;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .tab-name {
+    font-weight: 700;
+    color: #7eb3e8;
+    font-size: 0.72rem;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .tab-desc {
+    color: #4d7aa8;
+    font-size: 0.62rem;
+    line-height: 1.3;
+  }
+
+  /* Ngrok box */
+  .ngrok-box {
+    background: linear-gradient(135deg, #060b14, #0a1628);
+    border: 1px solid #00ff88;
+    border-radius: 6px;
+    padding: 16px 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .ngrok-box::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, #00ff8808 0%, transparent 70%);
+  }
+  .ngrok-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    color: #00ff88;
+    letter-spacing: 3px;
+    margin-bottom: 6px;
+  }
+  .ngrok-url {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.9rem;
+    color: #00ff88;
+    font-weight: 700;
+  }
+  .ngrok-desc {
+    font-size: 0.72rem;
+    color: #4d7aa8;
+    margin-top: 4px;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 30px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.6rem;
+    color: #1e3a5f;
+    letter-spacing: 3px;
+  }
+
+  /* Pulse dot */
+  .live-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    background: #00ff88;
+    border-radius: 50%;
+    margin-right: 6px;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 4px #00ff88; }
+    50% { opacity: 0.4; box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-tag">SYSTEM ARCHITECTURE DIAGRAM</div>
+    <h1>🛡️ KPMG MDR — SOC Copilot</h1>
+    <p>AI-Powered Security Operations Center &nbsp;|&nbsp; Capstone 2026 &nbsp;|&nbsp; <span class="live-dot"></span>LIVE SYSTEM</p>
+  </div>
+
+  <!-- Layer 1: Ingestion -->
+  <div class="layer blue">
+    <div class="layer-label">Layer 1</div>
+    <div class="layer-title">Data Ingestion</div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title green">Real Windows Event Logs</div>
+        <div class="event-row"><span class="event-id">4625</span><span class="event-name">Failed Login — Brute Force</span></div>
+        <div class="event-row"><span class="event-id">4648</span><span class="event-name">Explicit Credentials — Lateral Move</span></div>
+        <div class="event-row"><span class="event-id">4672</span><span class="event-name">Special Privileges — Priv Esc</span></div>
+        <div class="event-row"><span class="event-id">4720</span><span class="event-name">Account Created — Insider Threat</span></div>
+        <div class="event-row"><span class="event-id">4698</span><span class="event-name">Scheduled Task — Persistence</span></div>
+        <div class="event-row"><span class="event-id">4104</span><span class="event-name">Script Block — Suspicious PS</span></div>
+        <div style="margin-top:8px;">
+          <span class="badge badge-green">140,000+ events ingested</span>
+          <span class="badge badge-blue">LAPTOP-PKG8F0BM</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title blue">Synthetic Attack Simulator</div>
+        <div class="event-row"><span class="event-id">T1110</span><span class="event-name">Brute Force</span></div>
+        <div class="event-row"><span class="event-id">T1021</span><span class="event-name">Lateral Movement</span></div>
+        <div class="event-row"><span class="event-id">T1068</span><span class="event-name">Privilege Escalation</span></div>
+        <div class="event-row"><span class="event-id">T1074</span><span class="event-name">Insider Threat / Collection</span></div>
+        <div class="event-row"><span class="event-id">T1041</span><span class="event-name">Data Exfiltration</span></div>
+        <div style="margin-top:8px;">
+          <span class="badge badge-blue">attack_generator.py</span>
+          <span class="badge badge-orange">HEC port 8088</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <div class="connector-line"></div>
+    <div class="connector-label">Splunk Universal Forwarder + HTTP Event Collector</div>
+    <div class="connector-line"></div>
+    <div class="connector-arrow">▼</div>
+  </div>
+
+  <!-- Layer 2: Splunk -->
+  <div class="layer orange">
+    <div class="layer-label">Layer 2</div>
+    <div class="layer-title">Splunk Enterprise SIEM</div>
+    <div class="three-col">
+      <div class="card">
+        <div class="card-title orange">Ingestion</div>
+        <div class="detail-row">index=main</div>
+        <div class="detail-row">sourcetype=WinEventLog</div>
+        <div class="detail-row">sourcetype=synthetic_attack</div>
+      </div>
+      <div class="card">
+        <div class="card-title orange">Access Points</div>
+        <div class="detail-row">REST API port 8089</div>
+        <div class="detail-row">HEC port 8088</div>
+        <div class="detail-row">Web UI port 8000</div>
+      </div>
+      <div class="card">
+        <div class="card-title orange">Stats</div>
+        <div class="detail-row">140,000+ real events</div>
+        <div class="detail-row">218 synthetic events</div>
+        <div class="detail-row">6 sourcetypes tracked</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <div class="connector-line"></div>
+    <div class="connector-label">REST API polling every 2 minutes</div>
+    <div class="connector-line"></div>
+    <div class="connector-arrow">▼</div>
+  </div>
+
+  <!-- Layer 3: Triage Engine -->
+  <div class="layer purple">
+    <div class="layer-label">Layer 3</div>
+    <div class="layer-title">AI Triage Engine — triage_engine.py</div>
+    <div class="three-col">
+      <div class="card">
+        <div class="card-title purple">Groq LLM</div>
+        <div class="detail-row">Llama 3.3 70B Versatile</div>
+        <div class="detail-row">Temperature 0.1</div>
+        <div class="detail-row">Max tokens 150</div>
+        <div class="detail-row">Rate limit retry logic</div>
+      </div>
+      <div class="card">
+        <div class="card-title purple">Classification Output</div>
+        <div class="detail-row">TP — True Positive</div>
+        <div class="detail-row">FP — False Positive</div>
+        <div class="detail-row">NR — Needs Review</div>
+        <div class="detail-row">Confidence score %</div>
+      </div>
+      <div class="card">
+        <div class="card-title purple">Smart Filters</div>
+        <div class="detail-row">Deduplication layer</div>
+        <div class="detail-row">SYSTEM/Splunkd suppressed</div>
+        <div class="detail-row">Asset risk scoring</div>
+        <div class="detail-row">MITRE ATT&CK mapping</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <div class="connector-line"></div>
+    <div class="connector-arrow">▼</div>
+  </div>
+
+  <!-- Layer 4: DB + Playbooks -->
+  <div class="split-row">
+    <div class="layer green">
+      <div class="layer-label">Layer 4a</div>
+      <div class="layer-title">SQLite Database</div>
+      <div class="detail-row">id, timestamp, attack_type</div>
+      <div class="detail-row">mitre_tactic, mitre_technique</div>
+      <div class="detail-row">src_ip, dst_ip, user, severity</div>
+      <div class="detail-row">classification (TP/FP/NR)</div>
+      <div class="detail-row">confidence %, LLM reasoning</div>
+      <div class="detail-row">log_source, playbook_status</div>
+      <div style="margin-top:10px;">
+        <span class="badge badge-green">soc_alerts.db</span>
+        <span class="badge badge-blue">Full audit trail</span>
+      </div>
+    </div>
+    <div class="split-divider"><div class="split-divider-line"></div></div>
+    <div class="layer red">
+      <div class="layer-label">Layer 4b</div>
+      <div class="layer-title">Playbook Engine</div>
+      <div class="detail-row">P1: Brute Force → Block IP + Lock Account</div>
+      <div class="detail-row">P2: Lateral Move → Block SMB + Isolate Host</div>
+      <div class="detail-row">P3: Priv Esc → Revoke + Kill Sessions</div>
+      <div style="margin-top:10px;">
+        <span class="badge badge-orange">All actions SIMULATED</span>
+      </div>
+      <div style="margin-top:8px;padding:8px;background:#060b14;border:1px solid #ff444430;border-radius:4px;">
+        <div style="font-size:0.65rem;color:#ff4444;font-family:'Share Tech Mono',monospace;margin-bottom:4px;">→ SLACK #soc-alerts</div>
+        <div style="font-size:0.7rem;color:#8899aa;">Structured notifications on every playbook execution</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <div class="connector-line"></div>
+    <div class="connector-label">Read by Streamlit dashboard</div>
+    <div class="connector-line"></div>
+    <div class="connector-arrow">▼</div>
+  </div>
+
+  <!-- Layer 5: Dashboard -->
+  <div class="layer teal">
+    <div class="layer-label">Layer 5</div>
+    <div class="layer-title">Streamlit Dashboard — localhost:8501</div>
+    <div class="tabs-grid">
+      <div class="tab-item">
+        <span class="tab-number">TAB 01</span>
+        <span class="tab-name">Alert Queue</span>
+        <span class="tab-desc">Live alerts, colour-coded TP/FP, 4 filters</span>
+      </div>
+      <div class="tab-item">
+        <span class="tab-number">TAB 02</span>
+        <span class="tab-name">SOC Metrics</span>
+        <span class="tab-desc">6 Plotly charts, 7 KPI metrics</span>
+      </div>
+      <div class="tab-item">
+        <span class="tab-number">TAB 03</span>
+        <span class="tab-name">Alert Detail</span>
+        <span class="tab-desc">Per-alert deep dive + raw log</span>
+      </div>
+      <div class="tab-item">
+        <span class="tab-number">TAB 04</span>
+        <span class="tab-name">Playbook Console</span>
+        <span class="tab-desc">One-click containment + exec log</span>
+      </div>
+      <div class="tab-item">
+        <span class="tab-number">TAB 05</span>
+        <span class="tab-name">Incident Report</span>
+        <span class="tab-desc">AI timeline + exec summary + PDF</span>
+      </div>
+      <div class="tab-item">
+        <span class="tab-number">TAB 06</span>
+        <span class="tab-name">SOC Chatbot</span>
+        <span class="tab-desc">Context-stuffed AI analyst assistant</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="connector">
+    <div class="connector-line"></div>
+    <div class="connector-label">Ngrok secure tunnel</div>
+    <div class="connector-line"></div>
+    <div class="connector-arrow">▼</div>
+  </div>
+
+  <!-- Layer 6: Ngrok -->
+  <div class="ngrok-box">
+    <div class="ngrok-label">LAYER 6 — PUBLIC ACCESS</div>
+    <div class="ngrok-url">https://trippingly-multiradial-michel.ngrok-free.dev</div>
+    <div class="ngrok-desc">Accessible from any device, any network, worldwide &nbsp;·&nbsp; Permanent domain &nbsp;·&nbsp; HTTPS encrypted</div>
+  </div>
+
+  <div class="footer" style="margin-top:40px;">
+    KPMG MDR SOC COPILOT &nbsp;·&nbsp; PYTHON 3.9 + SPLUNK + GROQ LLAMA 3.3 + STREAMLIT &nbsp;·&nbsp; CAPSTONE 2026
+  </div>
+
+</div>
+</body>
+</html>
