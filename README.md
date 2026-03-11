@@ -237,6 +237,6 @@ We use under 1% of Llama 3.3's context window. RAG adds complexity with zero ben
 
 ## Author
 
-**Isha Jain** — KPMG Cybersecurity Capstone 2026
+**Daksh Jain** — KPMG Cybersecurity Capstone 2026
 
 *All IPs and usernames are fictional. Playbook actions are simulated. Never commit API keys to public repos.*
