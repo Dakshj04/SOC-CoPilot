@@ -1,4 +1,4 @@
-# 🛡️ KPMG MDR — SOC Copilot
+# 🛡️ MDR — SOC Copilot
 ### AI-Powered Security Operations Center | Capstone Project 2026
 
 ![Python](https://img.shields.io/badge/Python-3.9-blue?style=for-the-badge&logo=python)
